@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Mapbox Map with Clustering, Geocode Cache & Contact List</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.js"></script>
+  <!-- Supercluster for clustering -->
+  <script src="https://unpkg.com/supercluster@7.1.4/dist/supercluster.min.js"></script>
+  <style>
+    body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
+    #map { width: 80%; height: 500px; margin-top: 20px; }
+    #info-box { margin: 10px; padding: 10px; background: #f8f8f8; width: 80%; font-family: Arial, sans-serif; }
+    #contact-list { list-style: none; padding: 0; width: 80%; font-family: Arial, sans-serif; }
+    #contact-list li { padding: 8px; border-bottom: 1px solid #ddd; cursor: pointer; }
+    #contact-list li:hover { background: #f0f0f0; }
+    .marker-icon { width: 40px; cursor: pointer; transition: transform 0.1s ease; }
+    /* Updated cluster style: red background, white text */
+    .cluster-marker {
+      background: #ED2F24;
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="info-box"><em>Loading contacts...</em></div>
+<ul id="contact-list"><em>Contact list loading...</em></ul>
+
+<script>
+  // Mapbox token
+  mapboxgl.accessToken = 'pk.eyJ1IjoianVzdGluc2luY2xhaXJjcmVhdGl2ZSIsImEiOiJjbTl2dmJ2Z20wb3M4MnFtdzVqZ3l1YTdtIn0.yRr3osd2oFqcKbjg_3O1Hg';
+
+  // Google Sheet published info
+  const sheetId = '1dz75cfpN0r3YDVSjmESMOYgXcQYyRyo10RagGGdI1mw';
+  const gid     = '577841645';
+
+  // Icon URLs
+  const defaultIcon = 'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px.png';
+  const hoverIcon   = 'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-gs.png';
+  const clickIcon   = 'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-white.png';
+
+  let activeMarker = null;
+  let selectedName = null;
+  const contacts = [];
+  let clusterIndex;
+  const markers = {};
+
+  // Initialize map with Studio default position
+  const map = new mapboxgl.Map({
+    container: 'map', 
+    style: 'mapbox://styles/justinsinclaircreative/cma43snlr002t01sih71s9nng',
+    center: [-97.553372, 38.282550],
+    zoom: 3.31,
+    bearing: 0,
+    pitch: 0
+  });
+
+  map.on('load', () => {
+    // Stub the Google visualization callback
+    window.google = window.google || {};
+    window.google.visualization = window.google.visualization || {};
+    window.google.visualization.Query = window.google.visualization.Query || {};
+    window.google.visualization.Query.setResponse = function(response) {
+      const rows = response.table.rows;
+      rows.forEach(r => {
+        contacts.push({
+          fullName:    r.c[2]?.v || '',
+          email:       r.c[1]?.v || '',
+          phone:       r.c[3]?.v || '',
+          address:     r.c[4]?.v || '',
+          coords:      null
+        });
+      });
+      document.getElementById('info-box').innerHTML = `<em>Fetched ${contacts.length} contacts</em>`;
+      geocodeAll();
+    };
+
+    // Inject JSONP from Google Sheets
+    const script = document.createElement('script');
+    script.src =
+      `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}` +
+      `&tqx=out:json-in-script`;
+    document.head.appendChild(script);
+  });
+
+  async function geocodeAll() {
+    await Promise.all(contacts.map(async row => {
+      const key = `geocode_${row.address}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        row.coords = JSON.parse(stored);
+      } else {
+        try {
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(row.address)}.json?access_token=${mapboxgl.accessToken}`
+          );
+          const json = await res.json();
+          row.coords = json.features[0].geometry.coordinates;
+          localStorage.setItem(key, JSON.stringify(row.coords));
+        } catch {};
+      }
+    }));
+    buildClusterIndex();
+    initList();
+  }
+
+  function buildClusterIndex() {
+    const features = contacts.map((row,i) => ({
+      type: 'Feature', id: i,
+      properties: {fullName: row.fullName},
+      geometry: {type:'Point',coordinates: row.coords}
+    }));
+    clusterIndex = new Supercluster({radius:60, maxZoom:16});
+    clusterIndex.load(features);
+    map.on('moveend', updateClusters);
+    updateClusters();
+  }
+
+  function updateClusters() {
+    // Remove old markers
+    Object.values(markers).forEach(m => m.remove());
+    Object.keys(markers).forEach(k => delete markers[k]);
+
+    const bbox = map.getBounds().toArray().flat();
+    const zoom = Math.floor(map.getZoom());
+    const clusters = clusterIndex.getClusters(bbox, zoom);
+
+    clusters.forEach(c => {
+      const [lng,lat] = c.geometry.coordinates;
+      if (c.properties.cluster) {
+        const count = c.properties.point_count_abbreviated;
+        const el = document.createElement('div');
+        el.className = 'cluster-marker'; el.textContent = count;
+        const base = 25;
+        const perPin = 5;
+        const size = base + count * perPin;
+        el.style.width  = `${size}px`;
+        el.style.height = `${size}px`;
+        const m = new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);
+        markers[`cluster_${c.properties.cluster_id}`] = m;
+        el.addEventListener('click', () => {
+          const expZoom = clusterIndex.getClusterExpansionZoom(c.properties.cluster_id);
+          map.easeTo({center:[lng,lat],zoom:expZoom});
+        });
+      } else {
+        const idx = c.id;
+        const row = contacts[idx];
+        const el = document.createElement('img');
+        el.className = 'marker-icon';
+        el.src = (row.fullName === selectedName ? clickIcon : defaultIcon);
+        el.isActive = (row.fullName === selectedName);
+        el.addEventListener('mouseenter', () => el.src = hoverIcon);
+        el.addEventListener('mouseleave', () => el.src = el.isActive ? clickIcon : defaultIcon);
+        el.addEventListener('click', () => onContactClick(idx));
+        const m = new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);
+        markers[`point_${idx}`] = m;
+      }
+    });
+  }
+
+  function onContactClick(idx) {
+    selectedName = contacts[idx].fullName;
+    updateClusters();
+    showInfoAndList();
+  }
+
+  function showInfoAndList() {
+    const row = contacts.find(r => r.fullName === selectedName);
+    new mapboxgl.Popup({offset:25})
+      .setLngLat(row.coords)
+      .setHTML(
+        `<strong>${row.fullName}</strong><br>`+
+        `${row.address}<br>Email: ${row.email}<br>Phone: ${row.phone}`
+      )
+      .addTo(map);
+    document.getElementById('info-box').innerHTML =
+      `<h3>${row.fullName}</h3><p>${row.address}</p><p>Email: ${row.email}</p><p>Phone: ${row.phone}</p>`;
+    reorderList();
+  }
+
+  function initList() { reorderList(); }
+
+  function reorderList() {
+    const listEl = document.getElementById('contact-list');
+    let sorted = [...contacts];
+    sorted.sort((a,b) => a.fullName.localeCompare(b.fullName));
+    if (selectedName) {
+      sorted = sorted.filter(r => r.fullName !== selectedName);
+      const sel = contacts.find(r => r.fullName === selectedName);
+      sorted.unshift(sel);
+    }
+    listEl.innerHTML = '';
+    sorted.forEach(r => {
+      const li = document.createElement('li');
+      li.textContent = r.fullName;
+      li.addEventListener('click', () => {
+        const idx = contacts.findIndex(c => c.fullName === r.fullName);
+        map.flyTo({center: contacts[idx].coords, zoom: map.getZoom()});
+        onContactClick(idx);
+      });
+      listEl.appendChild(li);
+    });
+  }
+</script>
+
+</body>
+</html>
