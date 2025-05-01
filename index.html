@@ -2,128 +2,65 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Mapbox Contacts Map with Sidebar Left</title>
+  <title>Mapbox Contacts Map with Sidebar Left + Extras</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.js"></script>
   <script src="https://unpkg.com/supercluster@7.1.4/dist/supercluster.min.js"></script>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: #22252D;
-      color: #333;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .toolbar {
-      width: 80%; max-width: 800px;
-      margin: 15px 0;
-      display: flex;
-      gap: 10px;
-    }
-    .toolbar input,
-    .toolbar button {
-      padding: 8px;
-      border: none;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    .toolbar input { flex: 1; }
-    .toolbar button { background: #ED2F24; color: #fff; cursor: pointer; }
+    /* Layout */
+    body { margin:0; padding:0; background:#22252D; color:#333; font-family:Arial,sans-serif; display:flex; flex-direction:column; align-items:center; }
+    .toolbar { width:80%; max-width:800px; margin:15px 0; display:flex; gap:10px; }
+    .content { width:80%; max-width:1000px; display:flex; gap:10px; }
+    .sidebar { flex:1; display:flex; flex-direction:column; gap:10px; }
+    .map-container { flex:3; position:relative; border-radius:8px; overflow:hidden; height:500px; }
 
-    .content {
-      width: 80%; max-width: 1000px;
-      display: flex;
-      gap: 10px;
-    }
-    .sidebar {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    #info-box,
-    #contact-list {
-      background: #f8f8f8;
-      border-radius: 8px;
-      padding: 10px;
-      max-height: 240px;
-      overflow-y: auto;
-    }
-    #contact-list { list-style: none; padding: 0; }
-    #contact-list li {
-      background: #fff;
-      margin: 4px 0;
-      padding: 8px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #contact-list li:hover,
-    #contact-list li:focus { background: #e0e0e0; outline: none; }
+    /* Controls */
+    .toolbar input, .toolbar button { padding:8px; border:none; border-radius:4px; font-size:14px; }
+    .toolbar input { flex:1; }
+    .toolbar button { background:#ED2F24; color:#fff; cursor:pointer; }
 
-    .map-container {
-      flex: 3;
-      position: relative;
-      border-radius: 8px;
-      overflow: hidden;
-      height: 500px;
-    }
-    #map { width: 100%; height: 100%; }
-    #spinner {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      display: none;
-    }
-    .spinner {
-      border: 4px solid rgba(255,255,255,0.3);
-      border-left-color: #ED2F24;
-      border-radius: 50%;
-      width: 40px; height: 40px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Info panels */
+    #info-box { background:#f8f8f8; border-radius:8px; padding:10px; }
+    #basic-info { margin-bottom:8px; }
+    #toggle-details { display:none; margin-bottom:8px; background:#ED2F24; color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; }
+    #extra-details { display:none; background:#fff; padding:8px; border-radius:4px; }
+    #contact-list { background:#f8f8f8; border-radius:8px; padding:10px; max-height:240px; overflow-y:auto; list-style:none; }
+    #contact-list li { background:#fff; margin:4px 0; padding:8px; border-radius:4px; cursor:pointer; }
+    #contact-list li:hover, #contact-list li:focus { background:#e0e0e0; outline:none; }
 
-    .marker-icon {
-      width: 40px;
-      cursor: pointer;
-      transition: transform 0.1s ease;
-    }
-    .marker-icon:hover { transform: scale(1.1); }
+    /* Map & spinner */
+    #map { width:100%; height:100%; }
+    #spinner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:none; }
+    .spinner { border:4px solid rgba(255,255,255,0.3); border-left-color:#ED2F24; border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg);} }
 
-    .cluster-marker {
-      background: #ED2F24;
-      color: #fff;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
-    }
+    /* Animations */
+    @keyframes pop { from{transform:scale(0);} to{transform:scale(1);} }
+    .pop-in { animation:pop 0.3s ease-out; }
 
-    @media (max-width: 800px) {
-      .content { flex-direction: column; }
-      .map-container { height: 300px; }
-      #info-box, #contact-list { max-height: none; }
-    }
+    /* Marker styles */
+    .marker-icon { width:40px; cursor:pointer; }
+    .cluster-marker { background:#ED2F24; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold; cursor:pointer; box-shadow:0 0 0 2px rgba(255,255,255,0.6); }
+
+    @media(max-width:800px){ .content{flex-direction:column;} .map-container{height:300px;} }
   </style>
 </head>
 <body>
 
   <div class="toolbar">
     <input id="search" type="text" placeholder="Search name, email, phone, address..." aria-label="Search contacts" />
+    <button id="show-all">Show All</button>
     <button id="download">Download CSV</button>
   </div>
 
   <div class="content">
     <div class="sidebar">
-      <div id="info-box"><em>Loading contacts…</em></div>
+      <div id="info-box">
+        <div id="basic-info"><em>Loading contacts…</em></div>
+        <button id="toggle-details">Details</button>
+        <div id="extra-details"></div>
+      </div>
       <ul id="contact-list"></ul>
     </div>
     <div class="map-container">
@@ -133,232 +70,49 @@
   </div>
 
   <script>
-    // Mapbox token
     mapboxgl.accessToken = 'pk.eyJ1IjoianVzdGluc2luY2xhaXJjcmVhdGl2ZSIsImEiOiJjbTl2dmJ2Z20wb3M4MnFtdzVqZ3l1YTdtIn0.yRr3osd2oFqcKbjg_3O1Hg';
+    const sheetId='1dz75cfpN0r3YDVSjmESMOYgXcQYyRyo10RagGGdI1mw', gid='577841645';
+    const defaultView={center:[-97.553372,38.282550],zoom:3.31};
+    const icons={default:'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px.png',hover:'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-gs.png',click:'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-white.png'};
 
-    const sheetId = '1dz75cfpN0r3YDVSjmESMOYgXcQYyRyo10RagGGdI1mw';
-    const gid     = '577841645';
-    const defaultView = { center: [-97.553372, 38.282550], zoom: 3.31 };
-    const defaultIcon = 'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px.png';
-    const hoverIcon   = 'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-gs.png';
-    const clickIcon   = 'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-white.png';
+    let contacts=[], clusterIndex, markers={}, selectedIdx=null;
+    const spinner=document.getElementById('spinner');
+    const basicInfo=document.getElementById('basic-info');
+    const toggleBtn=document.getElementById('toggle-details');
+    const extraDetails=document.getElementById('extra-details');
+    const map=new mapboxgl.Map({container:'map',style:'mapbox://styles/justinsinclaircreative/cma43snlr002t01sih71s9nng',...defaultView});
 
-    let contacts = [];
-    let clusterIndex;
-    let markers = {};
-    let selectedName = null;
-
-    const spinner = document.getElementById('spinner');
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/justinsinclaircreative/cma43snlr002t01sih71s9nng',
-      ...defaultView
+    map.on('load',()=>{
+      map.addControl(new mapboxgl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:false,showAccuracyCircle:false}),'top-left');
+      map.addControl(new mapboxgl.NavigationControl(),'top-right');
+      class Recenter{onAdd(m){this.btn=document.createElement('button');this.btn.textContent='⟳';this.btn.className='mapboxgl-ctrl-recenter';this.btn.onclick=()=>m.flyTo({...defaultView,speed:2});this.cont=document.createElement('div');this.cont.className='mapboxgl-ctrl mapboxgl-ctrl-group';this.cont.appendChild(this.btn);return this.cont;}onRemove(){this.cont.remove();}};
+      map.addControl(new Recenter(),'top-right');
+      map.loadImage(icons.default,(e,i)=>{map.addImage('default',i);map.loadImage(icons.hover,(e2,i2)=>{map.addImage('hover',i2);map.loadImage(icons.click,(e3,i3)=>{map.addImage('click',i3);fetchData();});});});
     });
 
-    map.on('load', () => {
-      // Load custom icons
-      map.loadImage(defaultIcon, (err, img) => {
-        map.addImage('default-icon', img);
-        map.loadImage(hoverIcon, (err2, img2) => {
-          map.addImage('hover-icon', img2);
-          map.loadImage(clickIcon, (err3, img3) => {
-            map.addImage('click-icon', img3);
-            fetchData();
-          });
-        });
-      });
+    function fetchData(){spinner.style.display='block';window.google={visualization:{Query:{setResponse:resp=>{contacts=resp.table.rows.map(r=>({fullName:r.c[2]?.v,email:r.c[1]?.v,phone:r.c[3]?.v,address:r.c[4]?.v,career:r.c[5]?.v,strengths:r.c[6]?.v,notes:r.c[7]?.v,coords:null}));basicInfo.innerHTML=`Fetched ${contacts.length} contacts`;geocodeAll();}}}};const s=document.createElement('script');s.src=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json-in-script`;document.head.appendChild(s);}    
 
-      // Add controls
-      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      class RecenterControl {
-        onAdd(map) {
-          this._btn = document.createElement('button');
-          this._btn.className = 'mapboxgl-ctrl-recenter';
-          this._btn.textContent = '⟳';
-          this._btn.onclick = () => map.flyTo({ ...defaultView, speed: 2 });
-          this._container = document.createElement('div');
-          this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
-          this._container.appendChild(this._btn);
-          return this._container;
-        }
-        onRemove() { this._container.remove(); }
-      }
-      map.addControl(new RecenterControl(), 'top-right');
-    });
+    async function geocodeAll(){await Promise.all(contacts.map(async r=>{const k='geo_'+r.address,c=localStorage.getItem(k);if(c)r.coords=JSON.parse(c);else{try{const res=await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(r.address)}.json?access_token=${mapboxgl.accessToken}`);const js=await res.json();r.coords=js.features[0]?.geometry.coordinates||[0,0];localStorage.setItem(k,JSON.stringify(r.coords));}catch{r.coords=[0,0];}}}));spinner.style.display='none';buildClusterIndex();initList();}
 
-    function fetchData() {
-      spinner.style.display = 'block';
-      window.google = {
-        visualization: {
-          Query: {
-            setResponse: resp => {
-              contacts = resp.table.rows.map(r => ({
-                fullName: r.c[2]?.v,
-                email:    r.c[1]?.v,
-                phone:    r.c[3]?.v,
-                address:  r.c[4]?.v,
-                coords:   null
-              }));
-              document.getElementById('info-box').innerText = `Fetched ${contacts.length} contacts`;
-              geocodeAll();
-            }
-          }
-        }
-      };
-      const script = document.createElement('script');
-      script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json-in-script`;
-      document.head.appendChild(script);
-    }
+    function buildClusterIndex(){const feats=contacts.map((r,i)=>({type:'Feature',id:i,properties:{},geometry:{type:'Point',coordinates:r.coords}}));clusterIndex=new Supercluster({radius:60,maxZoom:16});clusterIndex.load(feats);map.on('moveend',updateClusters);updateClusters();}
 
-    async function geocodeAll() {
-      await Promise.all(
-        contacts.map(async row => {
-          const key = `geocode_${row.address}`;
-          const stored = localStorage.getItem(key);
-          if (stored) {
-            row.coords = JSON.parse(stored);
-          } else {
-            try {
-              const res = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(row.address)}.json?access_token=${mapboxgl.accessToken}`
-              );
-              const data = await res.json();
-              row.coords = data.features[0]?.geometry.coordinates || [0, 0];
-              localStorage.setItem(key, JSON.stringify(row.coords));
-            } catch {
-              row.coords = [0, 0];
-            }
-          }
-        })
-      );
-      spinner.style.display = 'none';
-      buildClusterIndex();
-      initList();
-    }
+    function updateClusters(){Object.values(markers).forEach(m=>m.remove());markers={};const bbox=map.getBounds().toArray().flat(),z=Math.floor(map.getZoom()),clusters=clusterIndex.getClusters(bbox,z);clusters.forEach(c=>{const [lng,lat]=c.geometry.coordinates;if(c.properties.cluster){const cnt=c.properties.point_count_abbreviated;const el=document.createElement('div');el.className='cluster-marker pop-in';el.textContent=cnt;const size=20+cnt*5;el.style.width=`${size}px`;el.style.height=`${size}px`;el.addEventListener('click',()=>{const ez=clusterIndex.getClusterExpansionZoom(c.properties.cluster_id);map.easeTo({center:[lng,lat],zoom:ez,speed:2});});markers[`c_${c.properties.cluster_id}`]=new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);}else{const idx=c.id,r=contacts[idx];const img=document.createElement('img');img.className='marker-icon pop-in';img.src=idx===selectedIdx?icons.click:icons.default;img.addEventListener('mouseenter',()=>img.src=idx===selectedIdx?icons.click:icons.hover);img.addEventListener('mouseleave',()=>img.src=idx===selectedIdx?icons.click:icons.default);img.addEventListener('click',()=>onContactClick(idx));markers[`p_${idx}`]=new mapboxgl.Marker(img).setLngLat([lng,lat]).addTo(map);} });}
 
-    function buildClusterIndex() {
-      const features = contacts.map((row, i) => ({
-        type: 'Feature',
-        id: i,
-        properties: {},
-        geometry: { type: 'Point', coordinates: row.coords }
-      }));
-      clusterIndex = new Supercluster({ radius: 60, maxZoom: 16 });
-      clusterIndex.load(features);
-      map.on('moveend', updateClusters);
-      updateClusters();
-    }
+    document.getElementById('show-all').addEventListener('click',()=>{const all=contacts.map(r=>r.coords);if(!all.length)return;const b=all.reduce((bb,c)=>bb.extend(c),new mapboxgl.LngLatBounds(all[0],all[0]));map.fitBounds(b,{padding:20,speed:2});});
 
-    function updateClusters() {
-      Object.values(markers).forEach(m => m.remove());
-      markers = {};
+    document.getElementById('search').addEventListener('input',e=>{const q=e.target.value.toLowerCase();const f=contacts.filter(r=>[r.fullName,r.email,r.phone,r.address].join(' ').toLowerCase().includes(q));const feats=f.map(r=>({type:'Feature',id:contacts.indexOf(r),properties:{},geometry:{type:'Point',coordinates:r.coords}}));clusterIndex.load(feats);updateClusters();reorderList(f);});
 
-      const bbox = map.getBounds().toArray().flat();
-      const zoom = Math.floor(map.getZoom());
-      const clusters = clusterIndex.getClusters(bbox, zoom);
+    document.getElementById('download').addEventListener('click',()=>{const rows=[['Full Name','Email','Phone','Address'],...contacts.map(r=>[r.fullName,r.email,r.phone,r.address])];const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const b=new Blob([csv],{type:'text/csv'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='contacts.csv';a.click(),URL.revokeObjectURL(u);});
 
-      clusters.forEach(c => {
-        const [lng, lat] = c.geometry.coordinates;
-        if (c.properties.cluster) {
-          const count = c.properties.point_count_abbreviated;
-          const el = document.createElement('div');
-          el.className = 'cluster-marker';
-          el.textContent = count;
-          const size = 20 + count * 5;
-          el.style.width = `${size}px`;
-          el.style.height = `${size}px`;
-          el.addEventListener('click', () => {
-            const expansionZoom = clusterIndex.getClusterExpansionZoom(c.properties.cluster_id);
-            map.easeTo({ center: [lng, lat], zoom: expansionZoom });
-          });
-          markers[`cluster_${c.properties.cluster_id}`] = new mapboxgl.Marker(el)
-            .setLngLat([lng, lat])
-            .addTo(map);
-        } else {
-          const idx = c.id;
-          const row = contacts[idx];
-          const img = document.createElement('img');
-          img.className = 'marker-icon';
-          img.src = (row.fullName === selectedName ? clickIcon : defaultIcon);
-          img.addEventListener('mouseenter', () => {
-            img.src = (row.fullName === selectedName ? clickIcon : hoverIcon);
-          });
-          img.addEventListener('mouseleave', () => {
-            img.src = (row.fullName === selectedName ? clickIcon : defaultIcon);
-          });
-          img.addEventListener('click', () => onContactClick(idx));
-          markers[`point_${idx}`] = new mapboxgl.Marker(img)
-            .setLngLat([lng, lat])
-            .addTo(map);
-        }
-      });
-    }
+    function onContactClick(idx){selectedIdx=idx;showInfo(idx);updateClusters();}
+    function showInfo(idx){const r=contacts[idx];const parts=r.address.split(',').map(x=>x.trim()),city=parts[1]||'',stateZip=parts[2]||'';basicInfo.innerHTML=`<h3>${r.fullName}</h3><p>${city}, ${stateZip}</p><p>${r.email}</p><p>${r.phone}</p>`;toggleBtn.style.display='inline-block';extraDetails.innerHTML=`<p><strong>Career/Work:</strong> ${r.career}</p><p><strong>Strengths/Interests:</strong> ${r.strengths}</p><p><strong>Notes:</strong> ${r.notes}</p>`;extraDetails.style.display='none';toggleBtn.textContent='Details';}
 
-    // Search filter
-    document.getElementById('search').addEventListener('input', e => {
-      const q = e.target.value.toLowerCase();
-      const filtered = contacts.filter(r =>
-        [r.fullName, r.email, r.phone, r.address].join(' ').toLowerCase().includes(q)
-      );
-      const feats = filtered.map(r => ({
-        type: 'Feature',
-        id: contacts.indexOf(r),
-        properties: {},
-        geometry: { type: 'Point', coordinates: r.coords }
-      }));
-      clusterIndex.load(feats);
-      updateClusters();
-      reorderList(filtered);
-    });
+    toggleBtn.addEventListener('click',()=>{extraDetails.style.display = extraDetails.style.display==='none'?'block':'none'; toggleBtn.textContent = extraDetails.style.display==='none'?'Details':'Hide Details';});
 
-    // CSV download
-    document.getElementById('download').addEventListener('click', () => {
-      const rows = [['Full Name', 'Email', 'Phone', 'Address'], ...contacts.map(r => [r.fullName, r.email, r.phone, r.address])];
-      const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'contacts.csv'; a.click(); URL.revokeObjectURL(url);
-    });
-
-    function onContactClick(idx) {
-      selectedName = contacts[idx].fullName;
-      showInfo(idx);
-      updateClusters();
-    }
-
-    function showInfo(idx) {
-      const r = contacts[idx];
-      document.getElementById('info-box').innerHTML =
-        `<h3>${r.fullName}</h3>` +
-        `<p>${r.address}</p>` +
-        `<p>Email: ${r.email}</p>` +
-        `<p>Phone: ${r.phone}</p>`;
-    }
-
-    function initList() {
-      reorderList(contacts);
-    }
-
-    function reorderList(list) {
-      const ul = document.getElementById('contact-list');
-      ul.innerHTML = '';
-      let items = list.map(r => r.fullName).sort();
-      if (selectedName) items = [selectedName, ...items.filter(n => n !== selectedName)];
-      items.forEach(name => {
-        const li = document.createElement('li');
-        li.textContent = name;
-        li.tabIndex = 0;
-        li.addEventListener('click', () => {
-          const idx = contacts.findIndex(r => r.fullName === name);
-          map.flyTo({ center: contacts[idx].coords, zoom: map.getZoom(), speed: 2 });
-          onContactClick(idx);
-        });
-        ul.appendChild(li);
-      });
-    }
+    function initList(){reorderList(contacts);}    
+    function reorderList(list){const ul=document.getElementById('contact-list');ul.innerHTML='';let names=list.map(r=>r.fullName).sort();if(selectedIdx!==null){const sel=contacts[selectedIdx].fullName;names=[sel,...names.filter(n=>n!==sel)];}names.forEach(name=>{const li=document.createElement('li');li.textContent=name;li.tabIndex=0;li.addEventListener('click',()=>{const idx=contacts.findIndex(r=>r.fullName===name);map.flyTo({center:contacts[idx].coords,zoom:map.getZoom(),speed:2});onContactClick(idx);} );ul.appendChild(li);} )}
 
     initList();
   </script>
-
 </body>
 </html>
