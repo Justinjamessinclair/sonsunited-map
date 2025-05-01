@@ -19,8 +19,7 @@
       align-items: center;
     }
     .toolbar {
-      width: 80%;
-      max-width: 800px;
+      width: 80%; max-width: 800px;
       margin: 15px 0;
       display: flex;
       gap: 10px;
@@ -36,8 +35,7 @@
     .toolbar button { background: #ED2F24; color: #fff; cursor: pointer; }
 
     .content {
-      width: 80%;
-      max-width: 1000px;
+      width: 80%; max-width: 1000px;
       display: flex;
       gap: 10px;
     }
@@ -68,9 +66,9 @@
 
     .map-container {
       flex: 3;
+      position: relative;
       border-radius: 8px;
       overflow: hidden;
-      position: relative;
       height: 500px;
     }
     #map { width: 100%; height: 100%; }
@@ -112,8 +110,7 @@
     @media (max-width: 800px) {
       .content { flex-direction: column; }
       .map-container { height: 300px; }
-      #info-box,
-      #contact-list { max-height: none; }
+      #info-box, #contact-list { max-height: none; }
     }
   </style>
 </head>
@@ -159,7 +156,7 @@
     });
 
     map.on('load', () => {
-      // Load icon images
+      // Load custom icons
       map.loadImage(defaultIcon, (err, img) => {
         map.addImage('default-icon', img);
         map.loadImage(hoverIcon, (err2, img2) => {
@@ -178,7 +175,7 @@
           this._btn = document.createElement('button');
           this._btn.className = 'mapboxgl-ctrl-recenter';
           this._btn.textContent = '⟳';
-          this._btn.onclick = () => map.flyTo(defaultView);
+          this._btn.onclick = () => map.flyTo({ ...defaultView, speed: 2 });
           this._container = document.createElement('div');
           this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
           this._container.appendChild(this._btn);
@@ -191,41 +188,49 @@
 
     function fetchData() {
       spinner.style.display = 'block';
-      window.google = { visualization: { Query: { setResponse: resp => {
-        contacts = resp.table.rows.map(r => ({
-          fullName: r.c[2]?.v,
-          email:    r.c[1]?.v,
-          phone:    r.c[3]?.v,
-          address:  r.c[4]?.v,
-          coords:   null
-        }));
-        document.getElementById('info-box').innerText = `Fetched ${contacts.length} contacts`;
-        geocodeAll();
-      }}}};
+      window.google = {
+        visualization: {
+          Query: {
+            setResponse: resp => {
+              contacts = resp.table.rows.map(r => ({
+                fullName: r.c[2]?.v,
+                email:    r.c[1]?.v,
+                phone:    r.c[3]?.v,
+                address:  r.c[4]?.v,
+                coords:   null
+              }));
+              document.getElementById('info-box').innerText = `Fetched ${contacts.length} contacts`;
+              geocodeAll();
+            }
+          }
+        }
+      };
       const script = document.createElement('script');
       script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json-in-script`;
       document.head.appendChild(script);
     }
 
     async function geocodeAll() {
-      await Promise.all(contacts.map(async row => {
-        const key = `geocode_${row.address}`;
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          row.coords = JSON.parse(stored);
-        } else {
-          try {
-            const res = await fetch(
-              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(row.address)}.json?access_token=${mapboxgl.accessToken}`
-            );
-            const data = await res.json();
-            row.coords = data.features[0]?.geometry.coordinates || [0,0];
-            localStorage.setItem(key, JSON.stringify(row.coords));
-          } catch {
-            row.coords = [0,0];
+      await Promise.all(
+        contacts.map(async row => {
+          const key = `geocode_${row.address}`;
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            row.coords = JSON.parse(stored);
+          } else {
+            try {
+              const res = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(row.address)}.json?access_token=${mapboxgl.accessToken}`
+              );
+              const data = await res.json();
+              row.coords = data.features[0]?.geometry.coordinates || [0, 0];
+              localStorage.setItem(key, JSON.stringify(row.coords));
+            } catch {
+              row.coords = [0, 0];
+            }
           }
-        }
-      }));
+        })
+      );
       spinner.style.display = 'none';
       buildClusterIndex();
       initList();
@@ -233,7 +238,8 @@
 
     function buildClusterIndex() {
       const features = contacts.map((row, i) => ({
-        type: 'Feature', id: i,
+        type: 'Feature',
+        id: i,
         properties: {},
         geometry: { type: 'Point', coordinates: row.coords }
       }));
@@ -255,51 +261,63 @@
         const [lng, lat] = c.geometry.coordinates;
         if (c.properties.cluster) {
           const count = c.properties.point_count_abbreviated;
-        const el = document.createElement('div');
-        el.className = 'cluster-marker';
-        el.textContent = count;
-        const size = 20 + count * 5;
-        el.style.width = `${size}px`;
-        el.style.height = `${size}px`;
-        el.addEventListener('click', () => {
-          const z = clusterIndex.getClusterExpansionZoom(c.properties.cluster_id);
-          map.easeTo({ center: [lng, lat], zoom: z });
-        });
-        markers[`cluster_${c.properties.cluster_id}`] = new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);
-      } else {
-        const idx = c.id;
-        const row = contacts[idx];
-        const img = document.createElement('img');
-        img.className = 'marker-icon';
-        img.src = row.fullName === selectedName ? clickIcon : defaultIcon;
-        img.addEventListener('mouseenter', () => img.src = row.fullName === selectedName ? clickIcon : hoverIcon);
-        img.addEventListener('mouseleave', () => img.src = row.fullName === selectedName ? clickIcon : defaultIcon);
-        img.addEventListener('click', () => onContactClick(idx));
-        markers[`point_${idx}`] = new mapboxgl.Marker(img).setLngLat([lng,lat]).addTo(map);
-      } });
+          const el = document.createElement('div');
+          el.className = 'cluster-marker';
+          el.textContent = count;
+          const size = 20 + count * 5;
+          el.style.width = `${size}px`;
+          el.style.height = `${size}px`;
+          el.addEventListener('click', () => {
+            const expansionZoom = clusterIndex.getClusterExpansionZoom(c.properties.cluster_id);
+            map.easeTo({ center: [lng, lat], zoom: expansionZoom });
+          });
+          markers[`cluster_${c.properties.cluster_id}`] = new mapboxgl.Marker(el)
+            .setLngLat([lng, lat])
+            .addTo(map);
+        } else {
+          const idx = c.id;
+          const row = contacts[idx];
+          const img = document.createElement('img');
+          img.className = 'marker-icon';
+          img.src = (row.fullName === selectedName ? clickIcon : defaultIcon);
+          img.addEventListener('mouseenter', () => {
+            img.src = (row.fullName === selectedName ? clickIcon : hoverIcon);
+          });
+          img.addEventListener('mouseleave', () => {
+            img.src = (row.fullName === selectedName ? clickIcon : defaultIcon);
+          });
+          img.addEventListener('click', () => onContactClick(idx));
+          markers[`point_${idx}`] = new mapboxgl.Marker(img)
+            .setLngLat([lng, lat])
+            .addTo(map);
+        }
+      });
     }
 
-    // Search
+    // Search filter
     document.getElementById('search').addEventListener('input', e => {
       const q = e.target.value.toLowerCase();
       const filtered = contacts.filter(r =>
         [r.fullName, r.email, r.phone, r.address].join(' ').toLowerCase().includes(q)
       );
       const feats = filtered.map(r => ({
-        type: 'Feature', id: contacts.indexOf(r), properties: {}, geometry: { type: 'Point', coordinates: r.coords }
+        type: 'Feature',
+        id: contacts.indexOf(r),
+        properties: {},
+        geometry: { type: 'Point', coordinates: r.coords }
       }));
       clusterIndex.load(feats);
       updateClusters();
       reorderList(filtered);
     });
 
-    // CSV Download
+    // CSV download
     document.getElementById('download').addEventListener('click', () => {
-      const rows = [ ['Full Name','Email','Phone','Address'], ...contacts.map(r => [r.fullName, r.email, r.phone, r.address]) ];
+      const rows = [['Full Name', 'Email', 'Phone', 'Address'], ...contacts.map(r => [r.fullName, r.email, r.phone, r.address])];
       const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a'); a.href = url; a.download = 'contacts.csv'; a.click(); URL.revokeObjectURL(url);
+      const a = document.createElement('a'); a.href = url; a.download = 'contacts.csv'; a.click(); URL.revokeObjectURL(url);
     });
 
     function onContactClick(idx) {
@@ -307,28 +325,39 @@
       showInfo(idx);
       updateClusters();
     }
+
     function showInfo(idx) {
       const r = contacts[idx];
-      document.getElementById('info-box').innerHTML = `
-        <h3>${r.fullName}</h3>
-        <p>${r.address}</p>
-        <p>Email: ${r.email}</p>
-        <p>Phone: ${r.phone}</p>
-      `;
+      document.getElementById('info-box').innerHTML =
+        `<h3>${r.fullName}</h3>` +
+        `<p>${r.address}</p>` +
+        `<p>Email: ${r.email}</p>` +
+        `<p>Phone: ${r.phone}</p>`;
     }
-    function initList() { reorderList(contacts); }
+
+    function initList() {
+      reorderList(contacts);
+    }
+
     function reorderList(list) {
       const ul = document.getElementById('contact-list');
       ul.innerHTML = '';
       let items = list.map(r => r.fullName).sort();
-      if (selectedName) items = [selectedName, ...items.filter(n => n!==selectedName)];
+      if (selectedName) items = [selectedName, ...items.filter(n => n !== selectedName)];
       items.forEach(name => {
         const li = document.createElement('li');
-        li.textContent = name; li.tabIndex = 0;
-        li.addEventListener('click', () => onContactClick(contacts.findIndex(r => r.fullName===name)));
+        li.textContent = name;
+        li.tabIndex = 0;
+        li.addEventListener('click', () => {
+          const idx = contacts.findIndex(r => r.fullName === name);
+          map.flyTo({ center: contacts[idx].coords, zoom: map.getZoom(), speed: 2 });
+          onContactClick(idx);
+        });
         ul.appendChild(li);
       });
     }
+
+    initList();
   </script>
 
 </body>
