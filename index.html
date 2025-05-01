@@ -2,82 +2,126 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Member Directory</title>
+  <title>Sons United Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.css" rel="stylesheet" />
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.css"
+    rel="stylesheet"
+  />
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.js"></script>
   <script src="https://unpkg.com/supercluster@7.1.4/dist/supercluster.min.js"></script>
   <style>
-    /* Title styling */
-    .title {
-      color: #fff;
-      font-size: 28px;
-      margin: 30px 0 30px; /* increased bottom spacing */
-      text-align: center;
+    .title { color:#fff; font-size:28px; margin:30px 0; text-align:center; }
+    body { margin:0; padding:0; background:#22252D; color:#333;
+      font-family:Arial,sans-serif; display:flex; flex-direction:column;
+      align-items:center; }
+    .toolbar { width:80%; max-width:800px; margin-bottom:15px; display:flex; gap:10px; }
+    .content { width:80%; max-width:1000px; display:flex; gap:10px; }
+    .sidebar { flex:1; display:flex; flex-direction:column; gap:10px; }
+    .map-container { flex:3; position:relative; border-radius:8px;
+      overflow:hidden; height:500px; }
+    .toolbar input,.toolbar button {
+      padding:8px; border:none; border-radius:4px; font-size:14px;
+    }
+    .toolbar input { flex:1; }
+    .toolbar button { background:#ED2F24; color:#fff; cursor:pointer; }
+
+    #info-box { background:#f8f8f8; border-radius:8px; padding:10px; }
+    #basic-info { margin-bottom:8px; text-align:center; }
+    #toggle-details { display:none; margin-bottom:8px;
+      background:#ED2F24; color:#fff; border:none; padding:6px 10px;
+      border-radius:4px; cursor:pointer; }
+    #extra-details { display:none; background:#fff; padding:8px;
+      border-radius:4px; }
+
+    /* wrap sort + list together */
+    #contact-list-module {
+      background:#f8f8f8;
+      border-radius:8px;
+      padding:10px;
+    }
+    #sort-container {
+      margin-bottom:8px;
+      text-align:center;
+    }
+    #sort-select {
+      padding:4px 8px;
+      border-radius:4px;
+      border:1px solid #ccc;
+    }
+    #contact-list {
+      list-style:none;
+      margin:0;
+      padding:0;
+      max-height:240px;
+      overflow-y:auto;
+    }
+    #contact-list li {
+      background:#fff; margin:4px 0; padding:8px;
+      border-radius:4px; cursor:pointer;
+    }
+    #contact-list li:hover,#contact-list li:focus {
+      background:#e0e0e0; outline:none;
+    }
+    .list-header {
+      background:#ddd; margin-top:10px; padding:4px 8px;
+      font-weight:bold; border-radius:4px; text-align:center;
     }
 
-    /* Layout */
-    body { margin: 0; padding: 0; background: #22252D; color: #333; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
-    .toolbar { width: 80%; max-width: 800px; margin-bottom: 15px; display: flex; gap: 10px; }
-    .content { width: 80%; max-width: 1000px; display: flex; gap: 10px; }
-    .sidebar { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-    .map-container { flex: 3; position: relative; border-radius: 8px; overflow: hidden; height: 500px; }
-
-    /* Controls */
-    .toolbar input, .toolbar button { padding: 8px; border: none; border-radius: 4px; font-size: 14px; }
-    .toolbar input { flex: 1; }
-    .toolbar button { background: #ED2F24; color: #fff; cursor: pointer; }
-
-    /* Info panels */
-    #info-box { background: #f8f8f8; border-radius: 8px; padding: 10px; }
-    #basic-info { margin-bottom: 8px; }
-    #toggle-details { display: none; margin-bottom: 8px; background: #ED2F24; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
-    #extra-details { display: none; background: #fff; padding: 8px; border-radius: 4px; }
-    #contact-list { background: #f8f8f8; border-radius: 8px; padding: 10px; max-height: 240px; overflow-y: auto; list-style: none; }
-    #contact-list li { background: #fff; margin: 4px 0; padding: 8px; border-radius: 4px; cursor: pointer; }
-    #contact-list li:hover, #contact-list li:focus { background: #e0e0e0; outline: none; }
-
-    /* Map & spinner */
-    #map { width: 100%; height: 100%; }
-    #spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; }
-    .spinner { border: 4px solid rgba(255,255,255,0.3); border-left-color: #ED2F24; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Animations */
-    @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
-    .pop-in { animation: pop 0.3s ease-out; }
-
-    /* Marker styles */
-    .marker-icon { width: 40px; cursor: pointer; }
-    .cluster-marker { background: #ED2F24; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 0 0 2px rgba(255,255,255,0.6); }
-
-    @media (max-width: 800px) { .content { flex-direction: column; } .map-container { height: 300px; } }
+    #map { width:100%; height:100%; }
+    #spinner { position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%); display:none; }
+    .spinner { border:4px solid rgba(255,255,255,0.3);
+      border-left-color:#ED2F24; border-radius:50%;
+      width:40px; height:40px; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes pop { from { transform:scale(0); } to { transform:scale(1); } }
+    .pop-in { animation:pop 0.3s ease-out; }
+    .marker-icon { width:40px; cursor:pointer; }
+    .cluster-marker {
+      background:#ED2F24; color:#fff; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:bold; cursor:pointer;
+      box-shadow:0 0 0 2px rgba(255,255,255,0.6);
+    }
+    @media(max-width:800px){
+      .content{flex-direction:column;} .map-container{height:300px;}
+    }
   </style>
 </head>
 <body>
-  <!-- Title -->
   <h1 class="title">Member Directory</h1>
 
-  <!-- Toolbar -->
   <div class="toolbar">
-    <input id="search" type="text" placeholder="Search name, email, phone, address..." aria-label="Search contacts" />
+    <input id="search" type="text"
+      placeholder="Search name, email, phone, address..."
+      aria-label="Search contacts" />
     <button id="show-all">Show All</button>
     <button id="download">Download CSV</button>
   </div>
 
-  <!-- Main Content -->
   <div class="content">
-    <!-- Sidebar -->
     <div class="sidebar">
       <div id="info-box">
         <div id="basic-info"><em>Loading contacts…</em></div>
         <button id="toggle-details">Details</button>
         <div id="extra-details"></div>
       </div>
-      <ul id="contact-list"></ul>
+
+      <div id="contact-list-module">
+        <div id="sort-container">
+          Sort by:
+          <select id="sort-select">
+            <option value="first">First Name</option>
+            <option value="last">Last Name</option>
+            <option value="state">State</option>
+            <option value="career">Career</option>
+          </select>
+        </div>
+        <ul id="contact-list"></ul>
+      </div>
     </div>
 
-    <!-- Map Container -->
     <div class="map-container">
       <div id="map"></div>
       <div id="spinner"><div class="spinner"></div></div>
@@ -85,50 +129,288 @@
   </div>
 
   <script>
-    mapboxgl.accessToken = 'pk.eyJ1IjoianVzdGluc2luY2xhaXJjcmVhdGl2ZSIsImEiOiJjbTl2dmJ2Z20wb3M4MnFtdzVqZ3l1YTdtIn0.yRr3osd2oFqcKbjg_3O1Hg';
-    const sheetId = '1dz75cfpN0r3YDVSjmESMOYgXcQYyRyo10RagGGdI1mw', gid = '577841645';
-    const defaultView = { center: [-97.553372, 38.282550], zoom: 3.31 };
+    mapboxgl.accessToken =
+      'pk.eyJ1IjoianVzdGluc2luY2xhaXJjcmVhdGl2ZSIsImEiOiJjbTl2dmJ2Z20wb3M4MnFtdzVqZ3l1YTdtIn0.yRr3osd2oFqcKbjg_3O1Hg';
+    const sheetId = '1dz75cfpN0r3YDVSjmESMOYgXcQYyRyo10RagGGdI1mw',
+          gid     = '577841645';
+    const defaultView = { center:[-97.553372,38.282550], zoom:3.31 };
     const icons = {
       default: 'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px.png',
       hover:   'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-gs.png',
       click:   'https://justinjamessinclair.github.io/sonsunitedmapboxassets/SonsUnitedIcon-80px-white.png'
     };
 
-    let contacts = [], clusterIndex, markers = {}, selectedIdx = null;
-    const spinner      = document.getElementById('spinner');
-    const basicInfo    = document.getElementById('basic-info');
-    const toggleBtn    = document.getElementById('toggle-details');
-    const extraDetails = document.getElementById('extra-details');
+    let contacts=[], clusterIndex, markers={}, selectedIdx=null;
+    const spinner      = document.getElementById('spinner'),
+          basicInfo    = document.getElementById('basic-info'),
+          toggleBtn    = document.getElementById('toggle-details'),
+          extraDetails = document.getElementById('extra-details'),
+          sortSelect   = document.getElementById('sort-select'),
+          contactList  = document.getElementById('contact-list');
 
-    const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/justinsinclaircreative/cma43snlr002t01sih71s9nng', ...defaultView });
-
-    map.on('load', () => {
-      map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false, showAccuracyCircle: false }), 'top-left');
-      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      class Recenter { onAdd(m) { this.btn=document.createElement('button'); this.btn.textContent='⟳'; this.btn.className='mapboxgl-ctrl-recenter'; this.btn.onclick=()=>m.flyTo({...defaultView,speed:2}); this.cont=document.createElement('div'); this.cont.className='mapboxgl-ctrl mapboxgl-ctrl-group'; this.cont.appendChild(this.btn); return this.cont;} onRemove(){this.cont.remove();}};
-      map.addControl(new Recenter(), 'top-right');
-      map.loadImage(icons.default,(e,i)=>{map.addImage('default',i); map.loadImage(icons.hover,(e2,i2)=>{map.addImage('hover',i2); map.loadImage(icons.click,(e3,i3)=>{map.addImage('click',i3); fetchData();});});});
+    const map=new mapboxgl.Map({
+      container:'map',
+      style:'mapbox://styles/justinsinclaircreative/cma43snlr002t01sih71s9nng',
+      ...defaultView
     });
 
-    function fetchData(){ spinner.style.display='block'; window.google={visualization:{Query:{setResponse:resp=>{contacts=resp.table.rows.map(r=>({fullName:r.c[2]?.v,email:r.c[1]?.v,phone:r.c[3]?.v,address:r.c[4]?.v,career:r.c[5]?.v,strengths:r.c[6]?.v,notes:r.c[7]?.v,coords:null})); basicInfo.textContent=`Fetched ${contacts.length} contacts`; geocodeAll();}}}}; const s=document.createElement('script'); s.src=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json-in-script`; document.head.appendChild(s);} 
+    map.on('load',()=>{
+      map.addControl(new mapboxgl.GeolocateControl({
+        positionOptions:{enableHighAccuracy:true},
+        trackUserLocation:false,
+        showAccuracyCircle:false
+      }),'top-left');
+      map.addControl(new mapboxgl.NavigationControl(),'top-right');
+      class Recenter{
+        onAdd(m){ this.btn=document.createElement('button');
+          this.btn.textContent='⟳'; this.btn.className='mapboxgl-ctrl-recenter';
+          this.btn.onclick=()=>m.flyTo({...defaultView,speed:2});
+          this.cont=document.createElement('div');
+          this.cont.className='mapboxgl-ctrl mapboxgl-ctrl-group';
+          this.cont.appendChild(this.btn);
+          return this.cont;
+        }
+        onRemove(){ this.cont.remove(); }
+      }
+      map.addControl(new Recenter(),'top-right');
+      Promise.all([
+        new Promise((r,j)=>map.loadImage(icons.default,(e,i)=>e?j(e):r(['default',i]))),
+        new Promise((r,j)=>map.loadImage(icons.hover,  (e,i)=>e?j(e):r(['hover',i]))),
+        new Promise((r,j)=>map.loadImage(icons.click,  (e,i)=>e?j(e):r(['click',i])))
+      ]).then(imgs=>{
+        imgs.forEach(([n,i])=>map.addImage(n,i));
+        fetchData();
+      }).catch(console.error);
+    });
 
-    async function geocodeAll(){ await Promise.all(contacts.map(async r=>{ const key=`geo_${r.address}`,stored=localStorage.getItem(key); if(stored) r.coords=JSON.parse(stored); else { try{ const res=await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(r.address)}.json?access_token=${mapboxgl.accessToken}`); const js=await res.json(); r.coords=js.features[0]?.geometry.coordinates||[0,0]; localStorage.setItem(key,JSON.stringify(r.coords)); }catch{r.coords=[0,0];}}})); spinner.style.display='none'; buildClusterIndex(); initList(); }
+    function fetchData(){
+      spinner.style.display='block';
+      window.google={visualization:{Query:{setResponse:res=>{
+        contacts=res.table.rows.map(r=>({
+          fullName:r.c[2]?.v, email:r.c[1]?.v, phone:r.c[3]?.v,
+          address:r.c[4]?.v, career:r.c[5]?.v,
+          strengths:r.c[6]?.v, notes:r.c[7]?.v, coords:null
+        }));
+        basicInfo.textContent=`${contacts.length} Sons United members:`;
+        geocodeAll();
+      }}}};
+      const s=document.createElement('script');
+      s.src=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json-in-script`;
+      document.head.appendChild(s);
+    }
 
-    function buildClusterIndex(){ const feats=contacts.map((r,i)=>({type:'Feature',id:i,properties:{},geometry:{type:'Point',coordinates:r.coords}})); clusterIndex=new Supercluster({radius:60,maxZoom:16}); clusterIndex.load(feats); map.on('moveend', updateClusters); updateClusters(); }
+    async function geocodeAll(){
+      await Promise.all(contacts.map(async r=>{
+        const key=`geo_${r.address}`, st=localStorage.getItem(key);
+        if(st) r.coords=JSON.parse(st);
+        else {
+          try{
+            const js=await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(r.address)}.json?access_token=${mapboxgl.accessToken}`
+            ).then(x=>x.json());
+            r.coords=js.features[0]?.geometry.coordinates||[0,0];
+            localStorage.setItem(key,JSON.stringify(r.coords));
+          }catch{r.coords=[0,0];}
+        }
+      }));
+      spinner.style.display='none';
+      buildClusterIndex();
+      sortSelect.value='first';
+      initList();
+    }
 
-    function updateClusters(){ Object.values(markers).forEach(m=>m.remove()); markers={}; const bbox=map.getBounds().toArray().flat(), z=Math.floor(map.getZoom()), cls=clusterIndex.getClusters(bbox,z); cls.forEach(c=>{ const [lng,lat]=c.geometry.coordinates; if(c.properties.cluster){ const cnt=c.properties.point_count_abbreviated; const el=document.createElement('div'); el.className='cluster-marker pop-in'; el.textContent=cnt; const size=20+cnt*5; el.style.width=`${size}px`; el.style.height=`${size}px`; el.addEventListener('click',()=>{ const ez=clusterIndex.getClusterExpansionZoom(c.properties.cluster_id); map.easeTo({center:[lng,lat],zoom:ez,speed:2}); }); markers[`c_${c.properties.cluster_id}`]=new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);} else { const idx=c.id; const r=contacts[idx]; const img=document.createElement('img'); img.className='marker-icon pop-in'; img.src=idx===selectedIdx?icons.click:icons.default; img.addEventListener('mouseenter',()=>img.src=idx===selectedIdx?icons.click:icons.hover); img.addEventListener('mouseleave',()=>img.src=idx===selectedIdx?icons.click:icons.default); img.addEventListener('click',()=>onContactClick(idx)); markers[`p_${idx}`]=new mapboxgl.Marker(img).setLngLat([lng,lat]).addTo(map);} }); }
+    function buildClusterIndex(){
+      const feats=contacts.map((r,i)=>({
+        type:'Feature',id:i,geometry:{type:'Point',coordinates:r.coords},properties:{}
+      }));
+      clusterIndex=new Supercluster({radius:60,maxZoom:16});
+      clusterIndex.load(feats);
+      map.on('moveend',updateClusters);
+      updateClusters();
+    }
 
-    document.getElementById('show-all').addEventListener('click',()=>{ const all=contacts.map(r=>r.coords); if(!all.length)return; const bounds=all.reduce((b,c)=>b.extend(c),new mapboxgl.LngLatBounds(all[0],all[0])); map.fitBounds(bounds,{padding:20,speed:2}); });
-    document.getElementById('search').addEventListener('input',e=>{ const q=e.target.value.toLowerCase(); const filtered=contacts.filter(r=>[r.fullName,r.email,r.phone,r.address].join(' ').toLowerCase().includes(q)); const feats=filtered.map(r=>({type:'Feature',id:contacts.indexOf(r),properties:{},geometry:{type:'Point',coordinates:r.coords}})); clusterIndex.load(feats); updateClusters(); reorderList(filtered); });
+    function updateClusters() {
+  const bbox = map.getBounds().toArray().flat();
+  const z    = Math.floor(map.getZoom());
+  const cls  = clusterIndex.getClusters(bbox, z);
+  const need = new Set();
 
-    document.getElementById('download').addEventListener('click',()=>{ const header=['Full Name','Email','Phone','Address','Career/Work','Strengths/Interests','Notes']; const rows=[header,...contacts.map(r=>[r.fullName,r.email,r.phone,r.address,r.career,r.strengths,r.notes])]; const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n'); const b=new Blob([csv],{type:'text/csv'}),u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download='contacts.csv'; a.click(); URL.revokeObjectURL(u); });
+  // figure out which markers we still need
+  cls.forEach(c => {
+    if (c.properties.cluster) need.add(`c_${c.properties.cluster_id}`);
+    else                      need.add(`p_${c.id}`);
+  });
 
-    function onContactClick(idx){ selectedIdx=idx; showInfo(idx); updateClusters(); }
-    function showInfo(idx){ const r=contacts[idx]; const parts=r.address.split(',').map(p=>p.trim()); const city=parts[1]||''; const stateZip=parts[2]||''; basicInfo.innerHTML=`<h3>${r.fullName}</h3><p>${city}, ${stateZip}</p><p>${r.email}</p><p>${r.phone}</p>`; toggleBtn.style.display='inline-block'; extraDetails.innerHTML=`<p><strong>Career/Work:</strong> ${r.career}</p><p><strong>Strengths/Interests:</strong> ${r.strengths}</p><p><strong>Notes:</strong> ${r.notes}</p>`; extraDetails.style.display='none'; toggleBtn.textContent='Details'; }
-    toggleBtn.addEventListener('click',()=>{ if(extraDetails.style.display==='none'){ extraDetails.style.display='block'; toggleBtn.textContent='Hide Details'; } else { extraDetails.style.display='none'; toggleBtn.textContent='Details'; }});
+  // remove any old markers
+  for (const k in markers) {
+    if (!need.has(k)) {
+      markers[k].remove();
+      delete markers[k];
+    }
+  }
+
+  // add any new clusters/pins
+  cls.forEach(c => {
+    if (c.properties.cluster) {
+      const key = `c_${c.properties.cluster_id}`;
+      if (markers[key]) return;
+      const [lng, lat] = c.geometry.coordinates;
+      const cnt        = c.properties.point_count_abbreviated;
+      const el         = document.createElement('div');
+      el.className     = 'cluster-marker pop-in';
+      el.textContent   = cnt;
+      const size       = 20 + cnt * 5;
+      el.style.width   = `${size}px`;
+      el.style.height  = `${size}px`;
+      el.onclick       = () => {
+        const ez = clusterIndex.getClusterExpansionZoom(c.properties.cluster_id);
+        map.easeTo({ center: [lng, lat], zoom: ez, speed: 2 });
+      };
+      markers[key] = new mapboxgl.Marker(el)
+                        .setLngLat([lng, lat])
+                        .addTo(map);
+    } else {
+      const key = `p_${c.id}`;
+      if (markers[key]) return;
+      const [lng, lat] = c.geometry.coordinates;
+      const img        = document.createElement('img');
+      img.className    = 'marker-icon pop-in';
+      img.src          = c.id===selectedIdx ? icons.click : icons.default;
+      img.onmouseenter = () => img.src = c.id===selectedIdx ? icons.click : icons.hover;
+      img.onmouseleave = () => img.src = c.id===selectedIdx ? icons.click : icons.default;
+      img.onclick      = () => onContactClick(c.id);
+      markers[key]     = new mapboxgl.Marker(img)
+                            .setLngLat([lng, lat])
+                            .addTo(map);
+    }
+  });
+}
+
+    document.getElementById('show-all').onclick=()=>{
+      if(!contacts.length) return;
+      const all=contacts.map(r=>r.coords),
+            bounds=all.reduce((b,c)=>b.extend(c),new mapboxgl.LngLatBounds(all[0],all[0]));
+      map.fitBounds(bounds,{padding:20,speed:2});
+    };
+
+    document.getElementById('search').oninput=e=>{
+      const q=e.target.value.toLowerCase(),
+            f=contacts.filter(r=>[r.fullName,r.email,r.phone,r.address].join(' ').toLowerCase().includes(q)),
+            feats=f.map(r=>({type:'Feature',id:contacts.indexOf(r),geometry:{type:'Point',coordinates:r.coords},properties:{}}));
+      clusterIndex.load(feats);
+      updateClusters();
+      reorderList(f);
+    };
+
+    document.getElementById('download').onclick=()=>{
+      const header=['Full Name','City','State','Zip Code','Email','Phone','Career/Work','Strengths/Interests','Notes'],
+            rows=[header,...contacts.map(r=>{
+              const p=r.address.split(',').map(s=>s.trim()).filter(Boolean);
+              return [r.fullName,p[1]||'',p[2]||'',p[3]||'',r.email,r.phone,r.career,r.strengths,r.notes];
+            })],
+            csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n'),
+            b=new Blob([csv],{type:'text/csv'}),u=URL.createObjectURL(b),a=document.createElement('a');
+      a.href=u; a.download='contacts.csv'; a.click(); URL.revokeObjectURL(u);
+    };
+
+    sortSelect.onchange=()=>reorderList(contacts);
+
+    function onContactClick(i){
+      if(selectedIdx!==null){
+        const oldMk=markers[`p_${selectedIdx}`];
+        if(oldMk) oldMk.getElement().src=icons.default;
+      }
+      selectedIdx=i;
+      const newMk=markers[`p_${i}`];
+      if(newMk) newMk.getElement().src=icons.click;
+      showInfo(i);
+    }
+
+    function showInfo(i){
+      const r=contacts[i], p=r.address.split(',').map(s=>s.trim()).filter(Boolean),
+            city=p[1]||'', stzp=p[2]?(p[2]+(p[3]?', '+p[3]:'')):'';
+      basicInfo.innerHTML=`
+        <h3>${r.fullName}</h3>
+        <p>${city}${stzp?(', '+stzp):''}</p>
+        <p>${r.email}</p><p>${r.phone}</p>`;
+      toggleBtn.style.display='inline-block';
+      extraDetails.innerHTML=`
+        <p><strong>Career/Work:</strong> ${r.career}</p>
+        <p><strong>Strengths/Interests:</strong> ${r.strengths}</p>
+        <p><strong>Notes:</strong> ${r.notes}</p>`;
+      extraDetails.style.display='none';
+      toggleBtn.textContent='Details';
+    }
+
+    toggleBtn.onclick=()=>{
+      if(extraDetails.style.display==='none'){
+        extraDetails.style.display='block'; toggleBtn.textContent='Hide Details';
+      } else {
+        extraDetails.style.display='none'; toggleBtn.textContent='Details';
+      }
+    };
 
     function initList(){ reorderList(contacts); }
-    function reorderList(list){ const ul=document.getElementById('contact-list'); ul.innerHTML=''; let names=list.map(r=>r.fullName).sort(); if(selectedIdx!==null){ const sel=contacts[selectedIdx].fullName; names=[sel,...names.filter(n=>n!==sel)]; } names.forEach(name=>{ const li=document.createElement('li'); li.textContent=name; li.tabIndex=0; li.addEventListener('click',()=>{ const idx=contacts.findIndex(r=>r.fullName===name); map.flyTo({center:contacts[idx].coords,zoom:map.getZoom(),speed:2}); onContactClick(idx); }); ul.appendChild(li); }); }
+    function reorderList(list){
+              contactList.innerHTML = '';
+     const crit = sortSelect.value;
+
+      // If sorting by first name: flat alphabetical, no headers
+      if (crit === 'first') {
+        list
+          .slice()
+          .sort((a,b) => a.fullName.localeCompare(b.fullName))
+          .forEach(r => {
+            const li = document.createElement('li');
+           li.textContent = r.fullName;
+            li.tabIndex = 0;
+            li.onclick = () => {
+              const idx = contacts.indexOf(r);
+              map.flyTo({ center: r.coords, zoom: map.getZoom(), speed: 2 });
+              onContactClick(idx);
+            };
+            contactList.appendChild(li);
+          });
+        return;
+      }
+
+      // Otherwise group with headers
+      const groups = {};
+      list.forEach(r => {
+        let key = '';
+        if (crit === 'last')   key = r.fullName.split(' ').slice(-1)[0][0].toUpperCase();
+        if (crit === 'state')  key = (r.address.split(',').map(s=>s.trim())[2]||'');
+        if (crit === 'career') key = r.career||'';
+        groups[key] = groups[key] || [];
+        groups[key].push(r);
+      });
+      Object.keys(groups).sort().forEach(hdr => {
+        const hli = document.createElement('li');
+        hli.textContent = hdr;
+        hli.className = 'list-header';
+        contactList.appendChild(hli);
+        groups[hdr]
+          .sort((a,b) => {
+            if (crit === 'last') {
+              const la = a.fullName.split(' ').slice(-1)[0],
+                    lb = b.fullName.split(' ').slice(-1)[0];
+              return la.localeCompare(lb);
+            }
+            return a.fullName.localeCompare(b.fullName);
+          })
+          .forEach(r => {
+            const li = document.createElement('li');
+            li.textContent = r.fullName;
+            li.tabIndex = 0;
+            li.onclick = () => {
+              const idx = contacts.indexOf(r);
+              map.flyTo({ center: r.coords, zoom: map.getZoom(), speed: 2 });
+              onContactClick(idx);
+            };
+            contactList.appendChild(li);
+      });
+      });
+    }
 
     initList();
   </script>
