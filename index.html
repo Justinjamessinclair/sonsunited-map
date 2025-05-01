@@ -84,9 +84,20 @@
       font-size:14px; font-weight:bold; cursor:pointer;
       box-shadow:0 0 0 2px rgba(255,255,255,0.6);
     }
-    @media(max-width:800px){
-      .content{flex-direction:column;} .map-container{height:300px;}
-    }
+    @media (max-width: 800px) {
+  .content {
+    flex-direction: column;
+  }
+  /* make the map-container come first */
+  .map-container {
+    order: -1;
+    height: 300px;
+  }
+  .sidebar {
+    order: 0;
+  }
+}
+
   </style>
 </head>
 <body>
