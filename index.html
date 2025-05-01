@@ -9,7 +9,12 @@
   <script src="https://unpkg.com/supercluster@7.1.4/dist/supercluster.min.js"></script>
   <style>
     /* Title styling */
-    .title { color: #fff; font-size: 28px; margin: 20px 0 10px; text-align: center; }
+    .title {
+      color: #fff;
+      font-size: 28px;
+      margin: 30px 0 30px; /* increased bottom spacing */
+      text-align: center;
+    }
 
     /* Layout */
     body { margin: 0; padding: 0; background: #22252D; color: #333; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
@@ -90,230 +95,40 @@
     };
 
     let contacts = [], clusterIndex, markers = {}, selectedIdx = null;
-    const spinner     = document.getElementById('spinner');
-    const basicInfo   = document.getElementById('basic-info');
-    const toggleBtn   = document.getElementById('toggle-details');
-    const extraDetails= document.getElementById('extra-details');
+    const spinner      = document.getElementById('spinner');
+    const basicInfo    = document.getElementById('basic-info');
+    const toggleBtn    = document.getElementById('toggle-details');
+    const extraDetails = document.getElementById('extra-details');
 
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/justinsinclaircreative/cma43snlr002t01sih71s9nng',
-      ...defaultView
-    });
+    const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/justinsinclaircreative/cma43snlr002t01sih71s9nng', ...defaultView });
 
     map.on('load', () => {
-      // Geolocation control
-      map.addControl(new mapboxgl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: false,
-        showAccuracyCircle: false
-      }), 'top-left');
-
-      // Navigation & Recenter
+      map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false, showAccuracyCircle: false }), 'top-left');
       map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      class Recenter {
-        onAdd(m) {
-          this.btn = document.createElement('button');
-          this.btn.textContent = '⟳';
-          this.btn.className = 'mapboxgl-ctrl-recenter';
-          this.btn.onclick = () => m.flyTo({ ...defaultView, speed: 2 });
-          this.cont = document.createElement('div');
-          this.cont.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
-          this.cont.appendChild(this.btn);
-          return this.cont;
-        }
-        onRemove() { this.cont.remove(); }
-      }
+      class Recenter { onAdd(m) { this.btn=document.createElement('button'); this.btn.textContent='⟳'; this.btn.className='mapboxgl-ctrl-recenter'; this.btn.onclick=()=>m.flyTo({...defaultView,speed:2}); this.cont=document.createElement('div'); this.cont.className='mapboxgl-ctrl mapboxgl-ctrl-group'; this.cont.appendChild(this.btn); return this.cont;} onRemove(){this.cont.remove();}};
       map.addControl(new Recenter(), 'top-right');
-
-      // Load icon sprites then data
-      map.loadImage(icons.default, (err, img) => {
-        map.addImage('default', img);
-        map.loadImage(icons.hover, (e2, img2) => {
-          map.addImage('hover', img2);
-          map.loadImage(icons.click, (e3, img3) => {
-            map.addImage('click', img3);
-            fetchData();
-          });
-        });
-      });
+      map.loadImage(icons.default,(e,i)=>{map.addImage('default',i); map.loadImage(icons.hover,(e2,i2)=>{map.addImage('hover',i2); map.loadImage(icons.click,(e3,i3)=>{map.addImage('click',i3); fetchData();});});});
     });
 
-    function fetchData() {
-      spinner.style.display = 'block';
-      window.google = { visualization: { Query: { setResponse: resp => {
-        contacts = resp.table.rows.map(r => ({
-          fullName:  r.c[2]?.v,
-          email:     r.c[1]?.v,
-          phone:     r.c[3]?.v,
-          address:   r.c[4]?.v,
-          career:    r.c[5]?.v,
-          strengths: r.c[6]?.v,
-          notes:     r.c[7]?.v,
-          coords:    null
-        }));
-        basicInfo.innerHTML = `Fetched ${contacts.length} contacts`;
-        geocodeAll();
-      }}}};
-      const s = document.createElement('script');
-      s.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json-in-script`;
-      document.head.appendChild(s);
-    }
+    function fetchData(){ spinner.style.display='block'; window.google={visualization:{Query:{setResponse:resp=>{contacts=resp.table.rows.map(r=>({fullName:r.c[2]?.v,email:r.c[1]?.v,phone:r.c[3]?.v,address:r.c[4]?.v,career:r.c[5]?.v,strengths:r.c[6]?.v,notes:r.c[7]?.v,coords:null})); basicInfo.textContent=`Fetched ${contacts.length} contacts`; geocodeAll();}}}}; const s=document.createElement('script'); s.src=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=out:json-in-script`; document.head.appendChild(s);} 
 
-    async function geocodeAll() {
-      await Promise.all(contacts.map(async r => {
-        const key = `geo_${r.address}`;
-        const stored = localStorage.getItem(key);
-        if (stored) r.coords = JSON.parse(stored);
-        else {
-          try {
-            const res = await fetch(
-              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(r.address)}.json?access_token=${mapboxgl.accessToken}`
-            );
-            const js = await res.json();
-            r.coords = js.features[0]?.geometry.coordinates || [0,0];
-            localStorage.setItem(key, JSON.stringify(r.coords));
-          } catch { r.coords = [0,0]; }
-        }
-      }));
-      spinner.style.display = 'none';
-      buildClusterIndex();
-      initList();
-    }
+    async function geocodeAll(){ await Promise.all(contacts.map(async r=>{ const key=`geo_${r.address}`,stored=localStorage.getItem(key); if(stored) r.coords=JSON.parse(stored); else { try{ const res=await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(r.address)}.json?access_token=${mapboxgl.accessToken}`); const js=await res.json(); r.coords=js.features[0]?.geometry.coordinates||[0,0]; localStorage.setItem(key,JSON.stringify(r.coords)); }catch{r.coords=[0,0];}}})); spinner.style.display='none'; buildClusterIndex(); initList(); }
 
-    function buildClusterIndex() {
-      const feats = contacts.map((r,i) => ({ type: 'Feature', id: i, properties: {}, geometry: { type: 'Point', coordinates: r.coords } }));
-      clusterIndex = new Supercluster({ radius:60, maxZoom:16 });
-      clusterIndex.load(feats);
-      map.on('moveend', updateClusters);
-      updateClusters();
-    }
+    function buildClusterIndex(){ const feats=contacts.map((r,i)=>({type:'Feature',id:i,properties:{},geometry:{type:'Point',coordinates:r.coords}})); clusterIndex=new Supercluster({radius:60,maxZoom:16}); clusterIndex.load(feats); map.on('moveend', updateClusters); updateClusters(); }
 
-    function updateClusters() {
-      Object.values(markers).forEach(m => m.remove());
-      markers = {};
-      const bbox = map.getBounds().toArray().flat();
-      const z = Math.floor(map.getZoom());
-      const cls = clusterIndex.getClusters(bbox, z);
-      cls.forEach(c => {
-        const [lng,lat] = c.geometry.coordinates;
-        if (c.properties.cluster) {
-          const cnt = c.properties.point_count_abbreviated;
-          const el = document.createElement('div');
-          el.className = 'cluster-marker pop-in';
-          el.textContent = cnt;
-          const size = 20 + cnt*5;
-          el.style.width  = `${size}px`;
-          el.style.height = `${size}px`;
-          el.addEventListener('click', () => {
-            const ez = clusterIndex.getClusterExpansionZoom(c.properties.cluster_id);
-            map.easeTo({ center:[lng,lat], zoom:ez, speed:2 });
-          });
-          markers[`c_${c.properties.cluster_id}`] = new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);
-        } else {
-          const idx = c.id;
-          const r = contacts[idx];
-          const img = document.createElement('img');
-          img.className = 'marker-icon pop-in';
-          img.src = idx===selectedIdx ? icons.click : icons.default;
-          img.addEventListener('mouseenter', () => img.src = idx===selectedIdx ? icons.click : icons.hover);
-          img.addEventListener('mouseleave', () => img.src = idx===selectedIdx ? icons.click : icons.default);
-          img.addEventListener('click', () => onContactClick(idx));
-          markers[`p_${idx}`] = new mapboxgl.Marker(img).setLngLat([lng,lat]).addTo(map);
-        }
-      });
-    }
+    function updateClusters(){ Object.values(markers).forEach(m=>m.remove()); markers={}; const bbox=map.getBounds().toArray().flat(), z=Math.floor(map.getZoom()), cls=clusterIndex.getClusters(bbox,z); cls.forEach(c=>{ const [lng,lat]=c.geometry.coordinates; if(c.properties.cluster){ const cnt=c.properties.point_count_abbreviated; const el=document.createElement('div'); el.className='cluster-marker pop-in'; el.textContent=cnt; const size=20+cnt*5; el.style.width=`${size}px`; el.style.height=`${size}px`; el.addEventListener('click',()=>{ const ez=clusterIndex.getClusterExpansionZoom(c.properties.cluster_id); map.easeTo({center:[lng,lat],zoom:ez,speed:2}); }); markers[`c_${c.properties.cluster_id}`]=new mapboxgl.Marker(el).setLngLat([lng,lat]).addTo(map);} else { const idx=c.id; const r=contacts[idx]; const img=document.createElement('img'); img.className='marker-icon pop-in'; img.src=idx===selectedIdx?icons.click:icons.default; img.addEventListener('mouseenter',()=>img.src=idx===selectedIdx?icons.click:icons.hover); img.addEventListener('mouseleave',()=>img.src=idx===selectedIdx?icons.click:icons.default); img.addEventListener('click',()=>onContactClick(idx)); markers[`p_${idx}`]=new mapboxgl.Marker(img).setLngLat([lng,lat]).addTo(map);} }); }
 
-    // Button Handlers
-    document.getElementById('show-all').addEventListener('click', ()=>{
-      const all = contacts.map(r=>r.coords);
-      if (!all.length) return;
-      const bounds = all.reduce((b,c)=>b.extend(c), new mapboxgl.LngLatBounds(all[0], all[0]));
-      map.fitBounds(bounds, { padding:20, speed:2 });
-    });
+    document.getElementById('show-all').addEventListener('click',()=>{ const all=contacts.map(r=>r.coords); if(!all.length)return; const bounds=all.reduce((b,c)=>b.extend(c),new mapboxgl.LngLatBounds(all[0],all[0])); map.fitBounds(bounds,{padding:20,speed:2}); });
+    document.getElementById('search').addEventListener('input',e=>{ const q=e.target.value.toLowerCase(); const filtered=contacts.filter(r=>[r.fullName,r.email,r.phone,r.address].join(' ').toLowerCase().includes(q)); const feats=filtered.map(r=>({type:'Feature',id:contacts.indexOf(r),properties:{},geometry:{type:'Point',coordinates:r.coords}})); clusterIndex.load(feats); updateClusters(); reorderList(filtered); });
 
-    document.getElementById('search').addEventListener('input', e => {
-      const q = e.target.value.toLowerCase();
-      const filtered = contacts.filter(r=>[r.fullName,r.email,r.phone,r.address].join(' ').toLowerCase().includes(q));
-      const feats = filtered.map(r=>({ type:'Feature', id:contacts.indexOf(r), properties:{}, geometry:{ type:'Point', coordinates:r.coords }}));
-      clusterIndex.load(feats);
-      updateClusters();
-      reorderList(filtered);
-    });
+    document.getElementById('download').addEventListener('click',()=>{ const header=['Full Name','Email','Phone','Address','Career/Work','Strengths/Interests','Notes']; const rows=[header,...contacts.map(r=>[r.fullName,r.email,r.phone,r.address,r.career,r.strengths,r.notes])]; const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n'); const b=new Blob([csv],{type:'text/csv'}),u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download='contacts.csv'; a.click(); URL.revokeObjectURL(u); });
 
-    document.getElementById('download').addEventListener('click', ()=>{
-      const rows = [['Full Name','Email','Phone','Address'], ...contacts.map(r=>[r.fullName,r.email,r.phone,r.address])];
-      const csv = rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'contacts.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+    function onContactClick(idx){ selectedIdx=idx; showInfo(idx); updateClusters(); }
+    function showInfo(idx){ const r=contacts[idx]; const parts=r.address.split(',').map(p=>p.trim()); const city=parts[1]||''; const stateZip=parts[2]||''; basicInfo.innerHTML=`<h3>${r.fullName}</h3><p>${city}, ${stateZip}</p><p>${r.email}</p><p>${r.phone}</p>`; toggleBtn.style.display='inline-block'; extraDetails.innerHTML=`<p><strong>Career/Work:</strong> ${r.career}</p><p><strong>Strengths/Interests:</strong> ${r.strengths}</p><p><strong>Notes:</strong> ${r.notes}</p>`; extraDetails.style.display='none'; toggleBtn.textContent='Details'; }
+    toggleBtn.addEventListener('click',()=>{ if(extraDetails.style.display==='none'){ extraDetails.style.display='block'; toggleBtn.textContent='Hide Details'; } else { extraDetails.style.display='none'; toggleBtn.textContent='Details'; }});
 
-    function onContactClick(idx) {
-      selectedIdx = idx;
-      showInfo(idx);
-      updateClusters();
-    }
-
-    function showInfo(idx) {
-      const r = contacts[idx];
-      const parts = r.address.split(',').map(p=>p.trim());
-      const city = parts[1]||'';
-      const stateZip = parts[2]||'';
-      basicInfo.innerHTML = `
-        <h3>${r.fullName}</h3>
-        <p>${city}, ${stateZip}</p>
-        <p>${r.email}</p>
-        <p>${r.phone}</p>
-      `;
-      toggleBtn.style.display = 'inline-block';
-      extraDetails.innerHTML = `
-        <p><strong>Career/Work:</strong> ${r.career}</p>
-        <p><strong>Strengths/Interests:</strong> ${r.strengths}</p>
-        <p><strong>Notes:</strong> ${r.notes}</p>
-      `;
-      extraDetails.style.display = 'none';
-      toggleBtn.textContent = 'Details';
-    }
-
-    toggleBtn.addEventListener('click', ()=>{
-      if (extraDetails.style.display === 'none') {
-        extraDetails.style.display = 'block';
-        toggleBtn.textContent = 'Hide Details';
-      } else {
-        extraDetails.style.display = 'none';
-        toggleBtn.textContent = 'Details';
-      }
-    });
-
-    function initList() {
-      reorderList(contacts);
-    }
-
-    function reorderList(list) {
-      const ul = document.getElementById('contact-list');
-      ul.innerHTML = '';
-      let names = list.map(r=>r.fullName).sort();
-      if (selectedIdx !== null) {
-        const sel = contacts[selectedIdx].fullName;
-        names = [sel, ...names.filter(n=>n!==sel)];
-      }
-      names.forEach(name => {
-        const li = document.createElement('li');
-        li.textContent = name;
-        li.tabIndex = 0;
-        li.addEventListener('click', ()=>{
-          const idx = contacts.findIndex(r=>r.fullName===name);
-          map.flyTo({ center: contacts[idx].coords, zoom: map.getZoom(), speed: 2 });
-          onContactClick(idx);
-        });
-        ul.appendChild(li);
-      });
-    }
+    function initList(){ reorderList(contacts); }
+    function reorderList(list){ const ul=document.getElementById('contact-list'); ul.innerHTML=''; let names=list.map(r=>r.fullName).sort(); if(selectedIdx!==null){ const sel=contacts[selectedIdx].fullName; names=[sel,...names.filter(n=>n!==sel)]; } names.forEach(name=>{ const li=document.createElement('li'); li.textContent=name; li.tabIndex=0; li.addEventListener('click',()=>{ const idx=contacts.findIndex(r=>r.fullName===name); map.flyTo({center:contacts[idx].coords,zoom:map.getZoom(),speed:2}); onContactClick(idx); }); ul.appendChild(li); }); }
 
     initList();
   </script>
